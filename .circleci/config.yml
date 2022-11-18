@@ -246,6 +246,20 @@ jobs:
       - store_artifacts:
           path: ./build.tgz
 
+  dispatch_github_event:
+    docker: *docker
+    environment: *environment
+    steps:
+      - run:
+          command: |
+            curl \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              https://api.github.com/repos/facebook/react/actions/workflows/40906692/dispatches \
+              -d '{"ref":"lt/artifacts","inputs":{"name":"Mona the Octocat","home":"San Francisco, CA"}}'
+
+
   sizebot:
     docker: *docker
     environment: *environment
@@ -367,7 +381,7 @@ jobs:
           command: |
             yarn extract-errors
             git diff --quiet || (echo "Found unminified errors. Either update the error codes map or disable error minification for the affected build, if appropriate." && false)
-  
+
   check_generated_fizz_runtime:
     docker: *docker
     environment: *environment
@@ -509,7 +523,7 @@ workflows:
             - setup
       - check_generated_fizz_runtime:
           requires:
-            - setup    
+            - setup
       - yarn_lint:
           requires:
             - setup
@@ -609,6 +623,10 @@ workflows:
       - run_devtools_e2e_tests:
           requires:
             - build_devtools_and_process_artifacts
+      - dispatch_github_event:
+          requires:
+            - process_artifacts_combined
+
 
   fuzz_tests:
     unless: << pipeline.parameters.prerelease_commit_sha >>
